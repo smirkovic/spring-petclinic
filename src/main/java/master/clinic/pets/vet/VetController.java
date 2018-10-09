@@ -55,63 +55,54 @@ class VetController {
         return "vets/vetList";
     }
 
-    @GetMapping({ "/vets" })
-    public @ResponseBody Vets showResourcesVetList() {
+    @GetMapping({"/vets"})
+    public @ResponseBody
+    Vets showResourcesVetList() {
         // Here we are returning an object of type 'Vets' rather than a collection of Vet
         // objects so it is simpler for JSon/Object mapping
         Vets vets = new Vets();
         vets.getVetList().addAll(this.vets.findAll());
         return vets;
     }
-    
+
     @GetMapping("/vets/new")
     public String initCreationForm(Map<String, Object> model) {
-        Vet vet = new Vet();
-        vet.setFirstName(" ");
-        vet.setLastName(" ");
-        Specialty specialties = new Specialty();
-        specialties.setName("TBD");
-        vet.addSpecialty(specialties);
-        System.out.println("-----" +vet.getSpecialties());
-        VetSpeciality vetSpeciality = new VetSpeciality();
-        vetSpeciality.setVet(vet);
-        HashSet aa = new HashSet();
-        aa.add(specialties);
-        vet.addSpecialty(specialties);
-        vet.setSpecialties(aa );
-        vetSpeciality.setSpec(specialties);
-        vetSpeciality.setVet(vet);
-        model.put("vet", vet);
-        model.put("specialties", specialties);
-        model.put("vetSpec", vetSpeciality);
+        model.put("vet", new Vet());
+        model.put("specialty", new Specialty());
         return VIEWS_VET_CREATE_OR_UPDATE_FORM;
     }
 
     @PostMapping("/vets/new")
-    public String processCreationForm(Vet vet,Specialty specialties, VetSpeciality spec, Map<String, Object> model, BindingResult result) {
+    public String processCreationForm(Vet vet, Specialty specialty, Map<String, Object> model, BindingResult result) {
         if (result.hasErrors()) {
             return VIEWS_VET_CREATE_OR_UPDATE_FORM;
         } else {
-            vets.save(spec.getSpec());
-            vet.addSpecialty(spec.getSpec());
+            vets.save(specialty);
+            vet.addSpecialty(specialty);
             vets.save(vet);
-            return "redirect:/vets/"+ vet.getId();
+            return "redirect:/vets/" + vet.getId();
         }
     }
-    
+
     @GetMapping("/vets/{vetId}/edit")
-    public String initUpdateVetForm(@PathVariable("vetId") int vetId, Model model) {
+    public String initUpdateVetForm(@PathVariable("vetId") int vetId, Map<String, Object> model) {
         Vet vet = this.vets.findById(vetId);
-        model.addAttribute(vet);
+        model.put("vet", vet);
+        model.put("specialty", vet.getSpecialties().get(0));
         return VIEWS_VET_CREATE_OR_UPDATE_FORM;
     }
 
     @PostMapping("/vets/{vetId}/edit")
-    public String processUpdateVetForm(@Valid Vet vet, BindingResult result, @PathVariable("vetId") int vetId) {
+    public String processUpdateVetForm(@Valid Vet vet, Specialty specialty, BindingResult result, @PathVariable("vetId") int vetId) {
         if (result.hasErrors()) {
             return VIEWS_VET_CREATE_OR_UPDATE_FORM;
         } else {
             vet.setId(vetId);
+            if (specialty != null && vet.getSpecialties().isEmpty()) {
+                vet.addSpecialty(specialty);
+                vets.save(specialty);
+            }
+            vets.save(specialty);
             this.vets.save(vet);
             return "redirect:/vets/{vetId}";
         }
@@ -120,7 +111,6 @@ class VetController {
     /**
      * Custom handler for displaying an owner.
      *
-     * @param ownerId the ID of the owner to display
      * @return a ModelMap with the model attributes for the view
      */
     @GetMapping("/vets/{vetId}")
